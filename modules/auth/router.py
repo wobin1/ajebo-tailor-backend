@@ -171,3 +171,13 @@ async def change_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Password change failed"
         )
+
+# Admin role dependency
+async def require_admin(current_user: UserResponse = Depends(get_current_user)) -> UserResponse:
+    """Require user to have admin role"""
+    if current_user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user

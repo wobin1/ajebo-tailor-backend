@@ -108,7 +108,7 @@ class ProductManager:
                     param_count += 1
                 
                 if filters.search:
-                    where_conditions.append(f"(p.name ILIKE ${param_count} OR p.description ILIKE ${param_count} OR ${param_count} = ANY(p.tags))")
+                    where_conditions.append(f"(p.name ILIKE ${param_count} OR p.description ILIKE ${param_count + 1} OR ${param_count + 2} = ANY(p.tags))")
                     search_term = f"%{filters.search}%"
                     params.extend([search_term, search_term, filters.search])
                     param_count += 3

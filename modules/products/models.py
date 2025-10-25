@@ -90,7 +90,7 @@ class ProductFilters(BaseModel):
     tags: Optional[List[str]] = None
     featured: Optional[bool] = None
     in_stock: Optional[bool] = None
-    sort_by: Optional[str] = Field(default="created_at", pattern="^(name|price|created_at|updated_at|featured)$")
+    sort_by: Optional[str] = Field(default="created_at", pattern="^(name|price|created_at|updated_at|featured|stock_quantity)$")
     sort_order: Optional[str] = Field(default="desc", pattern="^(asc|desc)$")
 
 class CategoryCreate(BaseModel):

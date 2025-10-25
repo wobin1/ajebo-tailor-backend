@@ -484,186 +484,187 @@ async def clear_cart(
 # Cart router is now included directly in main.py
 # router.include_router(cart_router)
 
-# Admin endpoints for order management
-admin_router = APIRouter(prefix="/admin/orders", tags=["Admin Orders"])
+# Removed duplicate admin endpoints - using dedicated admin/order_router.py instead
+# admin_router = APIRouter(prefix="/admin/orders", tags=["Admin Orders"])
 
-@admin_router.get("", response_model=dict)
-async def get_all_orders(
-    # Filtering parameters
-    status_filter: Optional[OrderStatus] = Query(None, alias="status", description="Filter by order status"),
-    payment_status: Optional[PaymentStatus] = Query(None, description="Filter by payment status"),
-    payment_method: Optional[PaymentMethod] = Query(None, description="Filter by payment method"),
-    date_from: Optional[datetime] = Query(None, description="Filter orders from date"),
-    date_to: Optional[datetime] = Query(None, description="Filter orders to date"),
-    min_amount: Optional[float] = Query(None, ge=0, description="Minimum order amount"),
-    max_amount: Optional[float] = Query(None, ge=0, description="Maximum order amount"),
-    search: Optional[str] = Query(None, description="Search in order number, customer name, email"),
-    sort_by: Optional[str] = Query("created_at", pattern="^(created_at|updated_at|total_amount|order_number)$"),
-    sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$"),
-    # Pagination parameters
-    page: int = Query(1, ge=1, description="Page number"),
-    limit: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: UserResponse = Depends(get_current_user)
-):
-    """Get all orders (Admin only)"""
-    if current_user.role not in ["admin", "designer"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions"
-        )
-    
-    try:
-        filters = OrderFilters(
-            status=status_filter,
-            payment_status=payment_status,
-            payment_method=payment_method,
-            date_from=date_from,
-            date_to=date_to,
-            min_amount=min_amount,
-            max_amount=max_amount,
-            search=search,
-            sort_by=sort_by,
-            sort_order=sort_order
-        )
-        
-        pagination = PaginationParams(page=page, limit=limit)
-        
-        # Get all orders (without user_id filter)
-        async with db_manager.get_connection() as conn:
-            # Build query conditions (similar to get_user_orders but without user_id filter)
-            conditions = []
-            params = []
-            param_count = 0
-            
-            if filters.status:
-                param_count += 1
-                conditions.append(f"o.status = ${param_count}")
-                params.append(filters.status.value)
-            
-            if filters.payment_status:
-                param_count += 1
-                conditions.append(f"o.payment_status = ${param_count}")
-                params.append(filters.payment_status.value)
-            
-            if filters.date_from:
-                param_count += 1
-                conditions.append(f"o.created_at >= ${param_count}")
-                params.append(filters.date_from)
-            
-            if filters.date_to:
-                param_count += 1
-                conditions.append(f"o.created_at <= ${param_count}")
-                params.append(filters.date_to)
-            
-            if filters.min_amount:
-                param_count += 1
-                conditions.append(f"o.total_amount >= ${param_count}")
-                params.append(filters.min_amount)
-            
-            if filters.max_amount:
-                param_count += 1
-                conditions.append(f"o.total_amount <= ${param_count}")
-                params.append(filters.max_amount)
-            
-            if filters.search:
-                param_count += 1
-                conditions.append(f"(o.order_number ILIKE ${param_count} OR u.first_name ILIKE ${param_count} OR u.last_name ILIKE ${param_count} OR u.email ILIKE ${param_count})")
-                params.extend([f"%{filters.search}%"] * 4)
-                param_count += 3
-            
-            where_clause = " AND ".join(conditions) if conditions else "1=1"
-            
-            # Count total orders
-            count_query = f"""
-                SELECT COUNT(*) FROM orders o
-                JOIN users u ON o.user_id = u.id
-                WHERE {where_clause}
-            """
-            total = await conn.fetchval(count_query, *params)
-            
-            # Get orders with pagination
-            orders_query = f"""
-                SELECT o.*, u.first_name, u.last_name, u.email,
-                       COUNT(oi.id) as items_count
-                FROM orders o
-                JOIN users u ON o.user_id = u.id
-                LEFT JOIN order_items oi ON o.id = oi.order_id
-                WHERE {where_clause}
-                GROUP BY o.id, u.first_name, u.last_name, u.email
-                ORDER BY o.{filters.sort_by} {filters.sort_order.upper()}
-                LIMIT {pagination.limit} OFFSET {pagination.offset}
-            """
-            
-            rows = await conn.fetch(orders_query, *params)
-            
-            orders = []
-            for row in rows:
-                order_data = OrderSummary(
-                    id=row['id'],
-                    order_number=row['order_number'],
-                    status=OrderStatus(row['status']),
-                    payment_status=PaymentStatus(row['payment_status']),
-                    total_amount=row['total_amount'],
-                    items_count=row['items_count'],
-                    created_at=row['created_at']
-                ).dict()
-                
-                # Add customer info
-                order_data['customer'] = {
-                    'name': f"{row['first_name']} {row['last_name']}",
-                    'email': row['email']
-                }
-                orders.append(order_data)
-            
-            return paginated_response(
-                data=orders,
-                total=total,
-                page=page,
-                limit=limit,
-                message="Orders retrieved successfully"
-            )
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Get all orders error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve orders"
-        )
+# @admin_router.get("", response_model=dict)
+# async def get_all_orders(
+#     # Filtering parameters
+#     status_filter: Optional[OrderStatus] = Query(None, alias="status", description="Filter by order status"),
+#     payment_status: Optional[PaymentStatus] = Query(None, description="Filter by payment status"),
+#     payment_method: Optional[PaymentMethod] = Query(None, description="Filter by payment method"),
+#     date_from: Optional[datetime] = Query(None, description="Filter orders from date"),
+#     date_to: Optional[datetime] = Query(None, description="Filter orders to date"),
+#     min_amount: Optional[float] = Query(None, ge=0, description="Minimum order amount"),
+#     max_amount: Optional[float] = Query(None, ge=0, description="Maximum order amount"),
+#     search: Optional[str] = Query(None, description="Search in order number, customer name, email"),
+#     sort_by: Optional[str] = Query("created_at", pattern="^(created_at|updated_at|total_amount|order_number)$"),
+#     sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$"),
+#     # Pagination parameters
+#     page: int = Query(1, ge=1, description="Page number"),
+#     limit: int = Query(20, ge=1, le=100, description="Items per page"),
+#     current_user: UserResponse = Depends(get_current_user)
+# ):
+# Commented out - using dedicated admin/order_router.py instead
+#     """Get all orders (Admin only)"""
+#     if current_user.role not in ["admin", "designer"]:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Insufficient permissions"
+#         )
+#     
+#     try:
+#         filters = OrderFilters(
+#             status=status_filter,
+#             payment_status=payment_status,
+#             payment_method=payment_method,
+#             date_from=date_from,
+#             date_to=date_to,
+#             min_amount=min_amount,
+#             max_amount=max_amount,
+#             search=search,
+#             sort_by=sort_by,
+#             sort_order=sort_order
+#         )
+#         
+#         pagination = PaginationParams(page=page, limit=limit)
+#         
+#         # Get all orders (without user_id filter)
+#         async with db_manager.get_connection() as conn:
+#             # Build query conditions (similar to get_user_orders but without user_id filter)
+#             conditions = []
+#             params = []
+#             param_count = 0
+#             
+#             if filters.status:
+#                 param_count += 1
+#                 conditions.append(f"o.status = ${param_count}")
+#                 params.append(filters.status.value)
+#             
+#             if filters.payment_status:
+#                 param_count += 1
+#                 conditions.append(f"o.payment_status = ${param_count}")
+#                 params.append(filters.payment_status.value)
+#             
+#             if filters.date_from:
+#                 param_count += 1
+#                 conditions.append(f"o.created_at >= ${param_count}")
+#                 params.append(filters.date_from)
+#             
+#             if filters.date_to:
+#                 param_count += 1
+#                 conditions.append(f"o.created_at <= ${param_count}")
+#                 params.append(filters.date_to)
+#             
+#             if filters.min_amount:
+#                 param_count += 1
+#                 conditions.append(f"o.total_amount >= ${param_count}")
+#                 params.append(filters.min_amount)
+#             
+#             if filters.max_amount:
+#                 param_count += 1
+#                 conditions.append(f"o.total_amount <= ${param_count}")
+#                 params.append(filters.max_amount)
+#             
+#             if filters.search:
+#                 param_count += 1
+#                 conditions.append(f"(o.order_number ILIKE ${param_count} OR u.first_name ILIKE ${param_count} OR u.last_name ILIKE ${param_count} OR u.email ILIKE ${param_count})")
+#                 params.extend([f"%{filters.search}%"] * 4)
+#                 param_count += 3
+#             
+#             where_clause = " AND ".join(conditions) if conditions else "1=1"
+#             
+#             # Count total orders
+#             count_query = f"""
+#                 SELECT COUNT(*) FROM orders o
+#                 JOIN users u ON o.user_id = u.id
+#                 WHERE {where_clause}
+#             """
+#             total = await conn.fetchval(count_query, *params)
+#             
+#             # Get orders with pagination
+#             orders_query = f"""
+#                 SELECT o.*, u.first_name, u.last_name, u.email,
+#                        COUNT(oi.id) as items_count
+#                 FROM orders o
+#                 JOIN users u ON o.user_id = u.id
+#                 LEFT JOIN order_items oi ON o.id = oi.order_id
+#                 WHERE {where_clause}
+#                 GROUP BY o.id, u.first_name, u.last_name, u.email
+#                 ORDER BY o.{filters.sort_by} {filters.sort_order.upper()}
+#                 LIMIT {pagination.limit} OFFSET {pagination.offset}
+#             """
+#             
+#             rows = await conn.fetch(orders_query, *params)
+#             
+#             orders = []
+#             for row in rows:
+#                 order_data = OrderSummary(
+#                     id=row['id'],
+#                     order_number=row['order_number'],
+#                     status=OrderStatus(row['status']),
+#                     payment_status=PaymentStatus(row['payment_status']),
+#                     total_amount=row['total_amount'],
+#                     items_count=row['items_count'],
+#                     created_at=row['created_at']
+#                 ).dict()
+#                 
+#                 # Add customer info
+#                 order_data['customer'] = {
+#                     'name': f"{row['first_name']} {row['last_name']}",
+#                     'email': row['email']
+#                 }
+#                 orders.append(order_data)
+#             
+#             return paginated_response(
+#                 data=orders,
+#                 total=total,
+#                 page=page,
+#                 limit=limit,
+#                 message="Orders retrieved successfully"
+#             )
+#             
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"Get all orders error: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to retrieve orders"
+#         )
 
-@admin_router.get("/{order_id}", response_model=dict)
-async def get_order_admin(
-    order_id: str,
-    current_user: UserResponse = Depends(get_current_user)
-):
-    """Get order by ID (Admin only)"""
-    if current_user.role not in ["admin", "designer"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions"
-        )
-    
-    try:
-        order = await order_manager.get_order_by_id(order_id)  # No user_id filter for admin
-        if not order:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Order not found"
-            )
-        
-        return success_response(
-            data=order,
-            message="Order retrieved successfully"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Get order admin error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve order"
-        )
+# @admin_router.get("/{order_id}", response_model=dict)
+# async def get_order_admin(
+#     order_id: str,
+#     current_user: UserResponse = Depends(get_current_user)
+# ):
+#     """Get order by ID (Admin only)"""
+#     if current_user.role not in ["admin", "designer"]:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Insufficient permissions"
+#         )
+#     
+#     try:
+#         order = await order_manager.get_order_by_id(order_id)  # No user_id filter for admin
+#         if not order:
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="Order not found"
+#             )
+#         
+#         return success_response(
+#             data=order,
+#             message="Order retrieved successfully"
+#         )
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"Get order admin error: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to retrieve order"
+#         )
 
 # Include admin router
-router.include_router(admin_router)
+# router.include_router(admin_router)

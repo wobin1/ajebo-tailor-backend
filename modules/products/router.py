@@ -29,8 +29,8 @@ async def get_products(
     tags: Optional[List[str]] = Query(None, description="Filter by tags"),
     featured: Optional[bool] = Query(None, description="Filter by featured products"),
     in_stock: Optional[bool] = Query(None, description="Filter by stock availability"),
-    sort_by: Optional[str] = Query("created_at", pattern="^(name|price|created_at|updated_at|featured)$"),
-    sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$"),
+    sort_by: Optional[str] = Query("created_at"),
+    sort_order: Optional[str] = Query("desc"),
     # Pagination parameters
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(12, ge=1, le=100, description="Items per page"),

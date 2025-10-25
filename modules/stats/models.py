@@ -17,3 +17,15 @@ class OrderStatsResponse(BaseModel):
 class DesignerStatsResponse(BaseModel):
     """Response model for designer dashboard statistics"""
     order_stats: OrderStatsResponse
+
+
+class AdminStatsResponse(BaseModel):
+    """Response model for admin dashboard statistics"""
+    total_orders: int
+    pending_orders: int
+    shipped_orders: int
+    delivered_orders: int
+    cancelled_orders: int
+    total_revenue: float
+    orders_change: int
+    revenue_change: float

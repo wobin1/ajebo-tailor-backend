@@ -20,6 +20,7 @@ from modules.users.router import router as users_router
 from modules.products.router import router as products_router, categories_router
 from modules.orders.router import router as orders_router
 from modules.stats.router import router as stats_router
+from modules.admin.router import router as admin_router
 
 # Configure logging
 logging.basicConfig(
@@ -191,6 +192,7 @@ app.include_router(products_router, prefix=API_V1_PREFIX, tags=["Products"])
 app.include_router(categories_router, prefix=API_V1_PREFIX, tags=["Categories"])
 app.include_router(orders_router, prefix=API_V1_PREFIX, tags=["Orders"])
 app.include_router(stats_router, prefix=API_V1_PREFIX, tags=["Statistics"])
+app.include_router(admin_router, prefix=API_V1_PREFIX, tags=["Admin"])
 
 # Import and include cart router separately
 from modules.orders.router import cart_router
