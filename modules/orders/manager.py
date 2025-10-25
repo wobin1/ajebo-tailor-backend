@@ -35,8 +35,10 @@ class OrderManager:
                     shipping_address = None
                     billing_address = None
                     if order_data.shipping_address_id:
+                        print(f"** Validating shipping address: {order_data.shipping_address_id} for user: {user_id} **")
                         shipping_address = await self._get_user_address(conn, user_id, order_data.shipping_address_id)
                         billing_address_id = order_data.billing_address_id or order_data.shipping_address_id
+                        print(f"** Validating billing address: {billing_address_id} for user: {user_id} **")
                         billing_address = await self._get_user_address(conn, user_id, billing_address_id)
                     else:
                         # For designer orders without address, use empty dict
@@ -45,7 +47,9 @@ class OrderManager:
 
                     print("** process 4 hit **")
                     # Validate and calculate order totals
+                    print(f"** Validating {len(order_data.items)} order items **")
                     subtotal, items_data = await self._validate_order_items(conn, order_data.items)
+                    print(f"** Items validated. Subtotal: {subtotal} **")
                     
                     print("** process 5 hit **")
                     # Apply coupon if provided
@@ -418,13 +422,37 @@ class OrderManager:
     # Helper methods
     async def _get_user_address(self, conn, user_id: str, address_id: str) -> dict:
         """Get user address by ID"""
+        # First check if address exists at all
+        address_exists = await conn.fetchrow(
+            "SELECT id, user_id FROM addresses WHERE id = $1",
+            address_id
+        )
+        
+        print(f"** Address lookup result: {dict(address_exists) if address_exists else 'None'} **")
+        
+        if not address_exists:
+            error_msg = f"Address {address_id} does not exist"
+            logger.error(error_msg)
+            raise ValidationError(error_msg)
+        
+        # Convert UUID to string for comparison
+        address_user_id = str(address_exists['user_id'])
+        if address_user_id != user_id:
+            error_msg = f"Address {address_id} does not belong to user {user_id}. It belongs to user {address_user_id}"
+            logger.error(error_msg)
+            raise ValidationError(error_msg)
+        
         address_row = await conn.fetchrow(
             "SELECT * FROM addresses WHERE id = $1 AND user_id = $2",
             address_id, user_id
         )
         
+        print(f"** Full address data: {dict(address_row) if address_row else 'None'} **")
+        
         if not address_row:
-            raise ValidationError("Invalid address ID")
+            error_msg = "Invalid address ID"
+            logger.error(error_msg)
+            raise ValidationError(error_msg)
         
         return dict(address_row)
     
@@ -434,18 +462,25 @@ class OrderManager:
         items_data = []
         
         for item in items:
+            print(f"** Validating product: {item.product_id} **")
             # Get product info
             product_row = await conn.fetchrow(
                 "SELECT id, name, slug, price, stock_quantity, images FROM products WHERE id = $1 AND is_active = true",
                 item.product_id
             )
             
+            print(f"** Product lookup result: {dict(product_row) if product_row else 'None'} **")
+            
             if not product_row:
-                raise ValidationError(f"Product {item.product_id} not found or inactive")
+                error_msg = f"Product {item.product_id} not found or inactive"
+                logger.error(error_msg)
+                raise ValidationError(error_msg)
             
             # Check stock
             if product_row['stock_quantity'] < item.quantity:
-                raise ValidationError(f"Insufficient stock for product {product_row['name']}")
+                error_msg = f"Insufficient stock for product {product_row['name']}. Available: {product_row['stock_quantity']}, Requested: {item.quantity}"
+                logger.error(error_msg)
+                raise ValidationError(error_msg)
             
             item_total = product_row['price'] * item.quantity
             subtotal += item_total

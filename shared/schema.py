@@ -141,7 +141,7 @@ async def apply_migrations():
     """Apply pending database migrations"""
     try:
         async with db_manager.get_connection() as conn:
-            # Check if customizations column exists in cart_items
+            # Migration 1: Check if customizations column exists in cart_items
             column_exists = await conn.fetchval(
                 """
                 SELECT EXISTS (
@@ -157,6 +157,28 @@ async def apply_migrations():
                 logger.info("Added customizations column to cart_items table")
             else:
                 logger.info("Customizations column already exists in cart_items table")
+            
+            # Migration 2: Check if priority column exists in orders
+            priority_exists = await conn.fetchval(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'orders' 
+                    AND column_name = 'priority'
+                )
+                """
+            )
+            
+            if not priority_exists:
+                # Read and execute the priority migration SQL
+                migration_path = Path(__file__).parent / "migrations" / "add_priority_to_orders.sql"
+                with open(migration_path, 'r') as f:
+                    migration_sql = f.read()
+                
+                await conn.execute(migration_sql)
+                logger.info("Added priority column to orders table")
+            else:
+                logger.info("Priority column already exists in orders table")
                 
     except Exception as e:
         logger.error(f"Failed to apply migrations: {e}")

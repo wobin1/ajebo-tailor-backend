@@ -31,12 +31,13 @@ async def create_order(
             message="Order created successfully"
         )
     except APIException as e:
+        logger.error(f"Create order APIException: {e.message}")
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
-        logger.error(f"Create order error: {e}")
+        logger.error(f"Create order error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Order creation failed"
+            detail=str(e)
         )
 
 @router.post("/designer")
