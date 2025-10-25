@@ -34,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Environment variables
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+CORS_ORIGINS = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000").split(",")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
