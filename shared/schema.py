@@ -29,9 +29,11 @@ async def initialize_database():
 async def seed_initial_data():
     """Seed initial data into the database"""
     try:
-        # Check if we already have data
+        # Check if we already have data - check both users and categories
         user_count = await db_manager.fetch_val("SELECT COUNT(*) FROM users")
-        if user_count > 0:
+        category_count = await db_manager.fetch_val("SELECT COUNT(*) FROM categories")
+        
+        if user_count > 0 or category_count > 0:
             logger.info("Database already has data, skipping seed")
             return
         
@@ -46,10 +48,12 @@ async def seed_initial_data():
         
         category_ids = {}
         for name, slug, description, parent_id in categories_data:
+            # Use INSERT ... ON CONFLICT to handle duplicates gracefully
             category_id = await db_manager.fetch_val(
                 """
                 INSERT INTO categories (name, slug, description, parent_id)
                 VALUES ($1, $2, $3, $4)
+                ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
                 RETURNING id
                 """,
                 name, slug, description, parent_id
@@ -65,6 +69,7 @@ async def seed_initial_data():
             """
             INSERT INTO users (email, name, password_hash, role, email_verified)
             VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (email) DO NOTHING
             """,
             "admin@ajebotailor.com", "Admin User", admin_password, "admin", True
         )
@@ -124,6 +129,7 @@ async def seed_initial_data():
                     images, sizes, colors, tags, featured, stock_quantity, sku, in_stock
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                ON CONFLICT (slug) DO NOTHING
                 """,
                 product["name"], product["slug"], product["description"],
                 product["price"], product.get("original_price"), product["category_id"],
