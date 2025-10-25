@@ -290,3 +290,17 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-10-25 18:37:23,384 - main - INFO - Shutting down Ajebo Tailor Backend API...
 2025-10-25 18:37:23,397 - shared.db - INFO - Database connection pool closed
 2025-10-25 18:37:23,397 - main - INFO - Database connection closed
+2025-10-25 18:46:01,403 - main - INFO - Starting Ajebo Tailor Backend API...
+2025-10-25 18:46:01,769 - shared.db - INFO - Database connection pool created successfully
+2025-10-25 18:46:01,769 - main - INFO - Database connection established
+2025-10-25 18:46:01,831 - shared.schema - INFO - Database schema initialized successfully
+2025-10-25 18:46:01,837 - shared.schema - INFO - Database already has data, skipping seed
+2025-10-25 18:46:01,837 - main - INFO - Database schema initialized
+2025-10-25 18:46:01,856 - shared.schema - INFO - Customizations column already exists in cart_items table
+2025-10-25 18:46:01,859 - shared.schema - INFO - Priority column already exists in orders table
+2025-10-25 18:46:01,860 - main - INFO - Database migrations applied
+2025-10-25 18:46:01,865 - main - WARNING - Redis connection failed: Error 61 connecting to localhost:6379. 61.. Rate limiting will use in-memory storage.
+2025-10-25 18:46:01,866 - main - INFO - Application startup completed successfully
+2025-10-26 00:02:51,866 - main - INFO - Shutting down Ajebo Tailor Backend API...
+2025-10-26 00:02:51,867 - shared.db - INFO - Database connection pool closed
+2025-10-26 00:02:51,867 - main - INFO - Database connection closed
